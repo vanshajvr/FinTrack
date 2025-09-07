@@ -19,6 +19,7 @@ def init_db():
             amount REAL NOT NULL,
             type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
             category TEXT NOT NULL,
+            currency TEXT NOT NULL,
             date TEXT NOT NULL
         )
     """)
@@ -38,6 +39,17 @@ st.set_page_config(
 st.sidebar.title("💼 FinTrack")
 st.sidebar.markdown("Manage your **income** and **expenses** smartly!")
 
+# Currency selection (default: INR)
+if "currency" not in st.session_state:
+    st.session_state.currency = "INR (₹)"
+
+currency = st.sidebar.selectbox(
+    "🌍 Choose Currency",
+    ["INR (₹)", "USD ($)", "EUR (€)", "GBP (£)"],
+    index=["INR (₹)", "USD ($)", "EUR (€)", "GBP (£)"].index(st.session_state.currency)
+)
+st.session_state.currency = currency
+
 menu = st.sidebar.radio("Navigate", ["➕ Add Transaction", "📊 Dashboard", "📜 View Transactions"])
 
 # ------------------ ADD TRANSACTION ------------------ #
@@ -55,21 +67,24 @@ if menu == "➕ Add Transaction":
     if st.button("Add Transaction"):
         conn = get_db_connection()
         conn.execute(
-            "INSERT INTO transactions (amount, type, category, date) VALUES (?, ?, ?, ?)",
-            (amount, trans_type, category, date.strftime("%Y-%m-%d")),
+            "INSERT INTO transactions (amount, type, category, currency, date) VALUES (?, ?, ?, ?, ?)",
+            (amount, trans_type, category, st.session_state.currency, date.strftime("%Y-%m-%d")),
         )
         conn.commit()
         conn.close()
-        st.success("✅ Transaction added successfully!")
+        st.success(f"✅ Transaction added successfully in {st.session_state.currency}!")
 
 # ------------------ DASHBOARD ------------------ #
 elif menu == "📊 Dashboard":
     st.title("📊 Finance Dashboard")
-    st.markdown("Visual insights into your **income** and **expenses**")
+    st.markdown(f"Visual insights into your **income** and **expenses** ({st.session_state.currency})")
 
     conn = get_db_connection()
     df = pd.read_sql_query("SELECT * FROM transactions", conn)
     conn.close()
+
+    # Filter only for selected currency
+    df = df[df["currency"] == st.session_state.currency]
 
     if df.empty:
         st.info("No transactions yet. Add some to see insights!")
@@ -79,22 +94,27 @@ elif menu == "📊 Dashboard":
         total_expense = df[df['type'] == 'expense']['amount'].sum()
         balance = total_income - total_expense
 
-        col1.metric("💰 Total Income", f"₹{total_income:,.2f}")
-        col2.metric("💸 Total Expense", f"₹{total_expense:,.2f}")
-        col3.metric("🏦 Balance", f"₹{balance:,.2f}")
+        currency_symbol = st.session_state.currency.split()[1]
+        col1.metric("💰 Total Income", f"{currency_symbol}{total_income:,.2f}")
+        col2.metric("💸 Total Expense", f"{currency_symbol}{total_expense:,.2f}")
+        col3.metric("🏦 Balance", f"{currency_symbol}{balance:,.2f}")
 
         st.markdown("---")
         col1, col2 = st.columns(2)
 
         # Pie chart by category
         with col1:
-            fig = px.pie(
-                df[df['type'] == 'expense'],
-                names='category',
-                values='amount',
-                title="Expense Breakdown by Category",
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            expense_df = df[df['type'] == 'expense']
+            if not expense_df.empty:
+                fig = px.pie(
+                    expense_df,
+                    names='category',
+                    values='amount',
+                    title=f"Expense Breakdown by Category ({st.session_state.currency})",
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("No expense data available for the selected currency.")
 
         # Bar chart by month
         with col2:
@@ -106,7 +126,7 @@ elif menu == "📊 Dashboard":
                 x='month',
                 y='amount',
                 color='type',
-                title="Monthly Income vs Expense",
+                title=f"Monthly Income vs Expense ({st.session_state.currency})",
                 barmode='group',
             )
             st.plotly_chart(fig2, use_container_width=True)
@@ -118,8 +138,11 @@ elif menu == "📜 View Transactions":
     df = pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC", conn)
     conn.close()
 
+    # Filter only for selected currency
+    df = df[df["currency"] == st.session_state.currency]
+
     if df.empty:
-        st.info("No transactions found.")
+        st.info("No transactions found for the selected currency.")
     else:
         st.dataframe(df)
         csv = df.to_csv(index=False).encode("utf-8")
