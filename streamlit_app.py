@@ -55,22 +55,6 @@ currency = st.sidebar.selectbox(
     index=["INR","USD","EUR","GBP"].index(st.session_state.currency)
 )
 st.session_state.currency = currency
-
-# Dark/light mode toggle
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
-st.session_state.dark_mode = st.sidebar.checkbox("Dark Mode", value=st.session_state.dark_mode)
-
-# Colors based on mode
-if st.session_state.dark_mode:
-    bg_color = "#121212"
-    text_color = "#f0f0f0"
-    card_color = "#1f1f1f"
-else:
-    bg_color = "#f9f9f9"
-    text_color = "#111111"
-    card_color = "#ffffff"
-
 st.markdown(f"""
     <style>
         body {{ background-color: {bg_color}; color: {text_color}; }}
