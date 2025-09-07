@@ -1,133 +1,148 @@
-import sqlite3
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 import plotly.express as px
+import sqlite3
+from datetime import datetime
 
-# ------------------ PAGE CONFIG ------------------
-st.set_page_config(page_title="FinTrack", page_icon="💰", layout="wide")
+# ------------------ DATABASE SETUP ------------------ #
+DB_FILE = "fintrack.db"
 
-# ------------------ TITLE AT TOP ------------------
-st.markdown(
-    """
-    <h1 style="text-align: center; color: #2E86DE; font-size: 48px;">
-        💰 FinTrack — Personal Finance Tracker
-    </h1>
-    <p style="text-align: center; font-size: 18px; color: #555;">
-        Track your income, expenses, and insights — all in one place!
-    </p>
-    """,
-    unsafe_allow_html=True
+def init_db():
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                amount REAL NOT NULL,
+                type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+                category TEXT NOT NULL,
+                currency TEXT NOT NULL,
+                date TEXT NOT NULL
+            )
+        """)
+init_db()
+
+# ------------------ STREAMLIT CONFIG ------------------ #
+st.set_page_config(
+    page_title="FinTrack - Personal Finance Dashboard",
+    page_icon="💰",
+    layout="wide",
 )
 
-# ------------------ DATABASE SETUP ------------------
-conn = sqlite3.connect("transactions.db", check_same_thread=False)
-c = conn.cursor()
+# ------------------ SIDEBAR NAVIGATION ------------------ #
+st.sidebar.title("💼 FinTrack")
+st.sidebar.markdown("**Manage your income & expenses smartly!**")
 
-c.execute("""
-CREATE TABLE IF NOT EXISTS transactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    amount REAL,
-    type TEXT,
-    category TEXT,
-    currency TEXT,
-    date TEXT
+menu = st.sidebar.radio(
+    "📌 Navigate",
+    ["➕ Add Transaction", "📜 Transactions", "📊 Insights"]
 )
-""")
-conn.commit()
 
-# ------------------ HELPER FUNCTIONS ------------------
-def add_transaction(amount, trans_type, category, currency, date):
-    c.execute(
-        "INSERT INTO transactions (amount, type, category, currency, date) VALUES (?, ?, ?, ?, ?)",
-        (amount, trans_type, category, currency, date)
-    )
-    conn.commit()
+if "currency" not in st.session_state:
+    st.session_state.currency = "INR (₹)"
 
-def get_all_transactions():
-    return pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC", conn)
+st.sidebar.subheader("🌍 Choose Currency")
+currency = st.sidebar.selectbox(
+    "Select currency",
+    ["INR (₹)", "USD ($)", "EUR (€)", "GBP (£)"],
+    index=["INR (₹)", "USD ($)", "EUR (€)", "GBP (£)"].index(st.session_state.currency)
+)
+st.session_state.currency = currency
 
-def get_totals_by_currency():
-    return pd.read_sql_query(
-        "SELECT currency, SUM(amount) as total FROM transactions GROUP BY currency", conn
-    )
-
-def get_expense_by_category():
-    return pd.read_sql_query(
-        "SELECT category, SUM(amount) as total FROM transactions WHERE type='Expense' GROUP BY category", conn
-    )
-
-# ------------------ SIDEBAR ------------------
-st.sidebar.title("⚙️ Settings")
-st.sidebar.info("Manage your personal finance with **FinTrack** 💸")
-
-# ------------------ MAIN TABS ------------------
-tab1, tab2, tab3 = st.tabs(["➕ Add Transaction", "📜 Transactions", "📊 Insights"])
-
-# ------------------ TAB 1: ADD TRANSACTION ------------------
-with tab1:
-    st.subheader("➕ Add New Transaction")
+# ------------------ ADD TRANSACTION ------------------ #
+if menu == "➕ Add Transaction":
+    st.title("➕ Add New Transaction")
 
     col1, col2 = st.columns(2)
     with col1:
-        amount = st.number_input("Amount", min_value=0.0, format="%.2f")
-        trans_type = st.radio("Type", ["Expense", "Income"], horizontal=True)
-        category = st.selectbox(
-            "Category",
-            ["Food", "Travel", "Shopping", "Bills", "Entertainment", "Salary", "Other"]
+        amount = st.number_input("💵 Amount", min_value=1.0, step=100.0)
+        trans_type = st.selectbox("Transaction Type", ["income", "expense"])
+    with col2:
+        category = st.text_input("📂 Category", "General")
+        date = st.date_input("📅 Date", datetime.today())
+
+    if st.button("Add Transaction"):
+        with sqlite3.connect(DB_FILE) as conn:
+            conn.execute("""
+                INSERT INTO transactions (amount, type, category, currency, date)
+                VALUES (?, ?, ?, ?, ?)
+            """, (amount, trans_type, category, st.session_state.currency, date.strftime("%Y-%m-%d")))
+        st.success(f"✅ Transaction added successfully in {st.session_state.currency}!")
+
+# ------------------ TRANSACTION HISTORY ------------------ #
+elif menu == "📜 Transactions":
+    st.title("📜 Transaction History")
+
+    with sqlite3.connect(DB_FILE) as conn:
+        df = pd.read_sql("SELECT * FROM transactions ORDER BY date DESC", conn)
+
+    df = df[df["currency"] == st.session_state.currency]
+
+    if df.empty:
+        st.info("No transactions found for the selected currency.")
+    else:
+        st.dataframe(df)
+        csv = df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "📥 Download CSV",
+            csv,
+            "transactions.csv",
+            "text/csv",
+            key='download-csv'
         )
 
-    with col2:
-        currency = st.selectbox("Currency", ["INR", "USD", "EUR", "GBP", "JPY"])
-        date = st.date_input("Date", datetime.today())
+# ------------------ DASHBOARD / INSIGHTS ------------------ #
+elif menu == "📊 Insights":
+    st.title("📊 Finance Dashboard")
+    st.markdown(f"Visual insights into your **income** and **expenses** ({st.session_state.currency})")
 
-    if st.button("💾 Save Transaction", use_container_width=True):
-        if amount > 0:
-            add_transaction(amount, trans_type, category, currency, date.strftime("%Y-%m-%d"))
-            st.success("✅ Transaction added successfully!")
-        else:
-            st.error("❌ Please enter a valid amount.")
+    with sqlite3.connect(DB_FILE) as conn:
+        df = pd.read_sql("SELECT * FROM transactions", conn)
 
-# ------------------ TAB 2: VIEW TRANSACTIONS ------------------
-with tab2:
-    st.subheader("📜 All Transactions")
+    df = df[df["currency"] == st.session_state.currency]
 
-    df = get_all_transactions()
     if df.empty:
-        st.info("No transactions yet. Add some from the **Add Transaction** tab.")
+        st.info("No transactions yet. Add some to see insights!")
     else:
-        st.dataframe(df, use_container_width=True)
+        # Key metrics
+        col1, col2, col3 = st.columns(3)
+        total_income = df[df['type'] == 'income']['amount'].sum()
+        total_expense = df[df['type'] == 'expense']['amount'].sum()
+        balance = total_income - total_expense
 
-        # Show totals per currency
-        totals_df = get_totals_by_currency()
-        st.subheader("💰 Total by Currency")
-        cols = st.columns(len(totals_df))
-        for i, row in totals_df.iterrows():
-            with cols[i]:
-                st.metric(label=row["currency"], value=f"{row['total']:.2f}")
+        currency_symbol = st.session_state.currency.split()[1]
+        col1.metric("💰 Total Income", f"{currency_symbol}{total_income:,.2f}")
+        col2.metric("💸 Total Expense", f"{currency_symbol}{total_expense:,.2f}")
+        col3.metric("🏦 Balance", f"{currency_symbol}{balance:,.2f}")
 
-# ------------------ TAB 3: INSIGHTS ------------------
-with tab3:
-    st.subheader("📊 Financial Insights")
+        st.markdown("---")
+        col1, col2 = st.columns(2)
 
-    df = get_all_transactions()
-    if df.empty:
-        st.info("No data to analyze yet.")
-    else:
-        # Expense by category
-        expense_df = get_expense_by_category()
-        if not expense_df.empty:
-            fig = px.pie(expense_df, names="category", values="total", title="Expenses by Category")
-            st.plotly_chart(fig, use_container_width=True)
+        # Expense breakdown pie chart
+        with col1:
+            expense_df = df[df['type'] == 'expense']
+            if not expense_df.empty:
+                fig = px.pie(
+                    expense_df,
+                    names='category',
+                    values='amount',
+                    title=f"Expense Breakdown ({st.session_state.currency})"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("No expense data available for the selected currency.")
 
-        # Trend over time
-        trend_df = df.groupby(["date", "currency"])["amount"].sum().reset_index()
-        fig2 = px.line(trend_df, x="date", y="amount", color="currency", title="Spending Trend Over Time")
-        st.plotly_chart(fig2, use_container_width=True)
+        # Monthly income vs expense bar chart
+        with col2:
+            df['date'] = pd.to_datetime(df['date'])
+            df['month'] = df['date'].dt.strftime('%Y-%m')
+            monthly_summary = df.groupby(['month', 'type'])['amount'].sum().reset_index()
 
-# ------------------ FOOTER ------------------
-st.markdown("---")
-st.markdown(
-    "<p style='text-align: center; color: grey;'>💡 <b>FinTrack</b> — Smart way to track your expenses 💸</p>",
-    unsafe_allow_html=True
-)
+            fig2 = px.bar(
+                monthly_summary,
+                x='month',
+                y='amount',
+                color='type',
+                title="Monthly Income vs Expense",
+                barmode='group'
+            )
+            st.plotly_chart(fig2, use_container_width=True)
