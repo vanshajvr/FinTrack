@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 
-API_URL = "http://localhost:5000/api/transactions"  # Change to your deployed URL
+API_URL = "https://fintrack-backend.herokuapp.com/api/transactions"  # Change to your deployed URL
 
 st.title("FinTrack: Your Personal Finance Tracker")
 
