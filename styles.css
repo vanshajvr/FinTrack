@@ -1,0 +1,22 @@
+/* styles.css - small premium style for FinTrack */
+.header{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 20px; border-radius:10px; margin-bottom:12px;
+  background: linear-gradient(90deg,#f0f7ff 0%, #ffffff 100%);
+  box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+}
+.title{ margin:0; font-size:34px; color:#0b4a6f; }
+.tag{ margin:0; color:#536878; font-size:14px; margin-top:4px; }
+.small-meta{ color:#98a6b3; font-size:13px; }
+
+.card{ padding:12px; border-radius:10px; background:#fff; box-shadow:0 6px 18px rgba(16,24,40,0.06); text-align:center; }
+.card .card-title{ font-size:14px; color:#65748b; margin-bottom:6px; }
+.card .card-value{ font-size:22px; font-weight:700; margin-top:4px; }
+
+/* income / expense colors */
+.card.income{ border-left:6px solid #2ecc71; }
+.card.expense{ border-left:6px solid #e74c3c; }
+.card.balance{ border-left:6px solid #3498db; }
+
+/* better table row spacing */
+[data-testid="stDataFrameContainer"] table { border-collapse: separate; border-spacing: 0 8px; }
