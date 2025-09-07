@@ -96,8 +96,9 @@ if menu == "Home":
     - Download transaction history as CSV
 
     **About the Creator:**
-    - Built by [Your Name]
-    - Passionate about clean, intuitive applications
+    - Built by [Vanshaj Verma]
+    - Aspiring Developer
+    [GitHub][https://www.github.com/vanshajvr]
     """)
     st.markdown("---")
 
