@@ -43,11 +43,12 @@ st.markdown("""
         color: #2f3640;
     }
 
-    /* Headers */
+    /* Header */
     .stHeader {
-        font-size: 36px;
+        font-size: 38px;
         font-weight: 700;
         color: #2f3640;
+        padding-bottom: 20px;
     }
 
     /* Sidebar */
@@ -61,6 +62,25 @@ st.markdown("""
         color: white;
         font-weight: 600;
         border-radius: 8px;
+        padding: 8px 15px;
+    }
+
+    /* Cards */
+    .card {
+        background-color: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    /* Chart containers */
+    .chart-card {
+        background-color: white;
+        padding: 15px;
+        border-radius: 15px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -115,7 +135,7 @@ def update_transaction(txn_id, amount, ttype, category, currency, date_str, note
 
 # ------------------ ADD TRANSACTION ------------------ #
 if menu == "Add Transaction":
-    st.header("Add New Transaction")
+    st.subheader("Add New Transaction")
     col1, col2 = st.columns(2)
     with col1:
         amount = st.number_input("Amount", min_value=1.0, step=100.0)
@@ -131,7 +151,7 @@ if menu == "Add Transaction":
 
 # ------------------ DASHBOARD ------------------ #
 elif menu == "Dashboard":
-    st.header(f"Dashboard ({st.session_state.currency})")
+    st.subheader(f"Dashboard ({st.session_state.currency})")
     df = get_transactions_df()
     df = df[df["currency"] == st.session_state.currency]
 
@@ -143,33 +163,37 @@ elif menu == "Dashboard":
         balance = total_income - total_expense
         currency_symbol = st.session_state.currency.split()[1]
 
-        # Display metrics as cards
+        # Metrics cards
         col1, col2, col3 = st.columns(3)
-        col1.metric("Total Income", f"{currency_symbol}{total_income:,.2f}")
-        col2.metric("Total Expense", f"{currency_symbol}{total_expense:,.2f}")
-        col3.metric("Balance", f"{currency_symbol}{balance:,.2f}")
+        col1.markdown(f"<div class='card'><h3>Total Income</h3><h2>{currency_symbol}{total_income:,.2f}</h2></div>", unsafe_allow_html=True)
+        col2.markdown(f"<div class='card'><h3>Total Expense</h3><h2>{currency_symbol}{total_expense:,.2f}</h2></div>", unsafe_allow_html=True)
+        col3.markdown(f"<div class='card'><h3>Balance</h3><h2>{currency_symbol}{balance:,.2f}</h2></div>", unsafe_allow_html=True)
 
         st.markdown("---")
         col1, col2 = st.columns(2)
 
-        # Pie chart for expenses
+        # Pie chart card
         with col1:
             expense_df = df[df['type']=='expense']
             if not expense_df.empty:
                 fig = px.pie(expense_df, names='category', values='amount', title="Expense by Category")
+                st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
                 st.plotly_chart(fig, use_container_width=True)
+                st.markdown("</div>", unsafe_allow_html=True)
 
-        # Bar chart for monthly summary
+        # Monthly summary bar chart
         with col2:
             df['date'] = pd.to_datetime(df['date'])
             df['month'] = df['date'].dt.strftime('%Y-%m')
             monthly_summary = df.groupby(['month','type'])['amount'].sum().reset_index()
             fig2 = px.bar(monthly_summary, x='month', y='amount', color='type', barmode='group', title="Monthly Income vs Expense")
+            st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
             st.plotly_chart(fig2, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------ VIEW TRANSACTIONS ------------------ #
 elif menu == "View Transactions":
-    st.header("Transaction History")
+    st.subheader("Transaction History")
     df_all = get_transactions_df()
     df_all = df_all[df_all["currency"] == st.session_state.currency]
 
