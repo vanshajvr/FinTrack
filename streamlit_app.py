@@ -100,25 +100,38 @@ if menu == "Home":
     st.markdown("---")
 
 # ------------------ ADD TRANSACTION ------------------ #
+# ------------------ ADD TRANSACTION ------------------ #
 elif menu == "Add Transaction":
     st.title("Add New Transaction")
+
+    # Predefined categories
+    categories = ["Salary", "Food", "Travel", "Entertainment", "Shopping", "Bills", "Health", "General"]
+
     col1, col2 = st.columns(2)
     with col1:
         amount = st.number_input("Amount", min_value=1.0, step=100.0)
         trans_type = st.selectbox("Transaction Type", ["income", "expense"])
     with col2:
-        category = st.text_input("Category", "General")
+        # Category selection with option to add custom
+        category_option = st.selectbox("Select Category", categories + ["Other"])
+        if category_option == "Other":
+            category = st.text_input("Enter Category")
+        else:
+            category = category_option
         date = st.date_input("Date", datetime.today())
 
     if st.button("Add Transaction"):
-        conn = get_db_connection()
-        conn.execute(
-            "INSERT INTO transactions (amount, type, category, currency, date) VALUES (?, ?, ?, ?, ?)",
-            (amount, trans_type, category, st.session_state.currency, date.strftime("%Y-%m-%d")),
-        )
-        conn.commit()
-        conn.close()
-        st.success(f"Transaction added successfully in {st.session_state.currency}!")
+        if not category:
+            st.warning("Please enter a category.")
+        else:
+            conn = get_db_connection()
+            conn.execute(
+                "INSERT INTO transactions (amount, type, category, currency, date) VALUES (?, ?, ?, ?, ?)",
+                (amount, trans_type, category, st.session_state.currency, date.strftime("%Y-%m-%d")),
+            )
+            conn.commit()
+            conn.close()
+            st.success(f"Transaction added successfully in {st.session_state.currency}!")
 
 # ------------------ DASHBOARD ------------------ #
 elif menu == "Dashboard":
