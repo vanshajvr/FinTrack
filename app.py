@@ -1,8 +1,11 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS # Import the CORS extension
 import sqlite3
 import os
 
 app = Flask(__name__)
+CORS(app) # Enable CORS for all routes
+
 # Get the directory of the current file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Define the path to the SQLite database file
@@ -68,5 +71,5 @@ def get_transactions():
     return jsonify(transactions_list), 200
 
 if __name__ == '__main__':
-    # To run this, you need to install Flask: pip install Flask
+    # To run this, you need to install Flask and Flask-CORS: pip install Flask Flask-CORS
     app.run(debug=True)
