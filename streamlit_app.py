@@ -1,4 +1,3 @@
-# streamlit_app.py
 import streamlit as st
 import sqlite3
 from datetime import datetime
@@ -48,9 +47,9 @@ def get_category_data():
     data = cursor.fetchall()
     return dict(data)
 
-# --- Sidebar ---
+# --- Sidebar filters ---
 st.sidebar.title("FinTrack Controls")
-st.sidebar.write("Use the sidebar to filter transactions")
+st.sidebar.write("Filter transactions here")
 filter_type = st.sidebar.selectbox("Filter by Type", ["All", "income", "expense"])
 filter_category = st.sidebar.text_input("Filter by Category (optional)", "")
 
@@ -77,7 +76,7 @@ with col2:
     st.metric("Total Expenses", f"₹{total_expense}")
     st.metric("Balance", f"₹{balance}")
 
-# --- Transactions Table ---
+# --- Transaction Table ---
 st.header("Transaction History 📝")
 transactions = get_transactions()
 df = pd.DataFrame(transactions, columns=["ID", "Amount", "Type", "Category", "Date"])
@@ -90,7 +89,7 @@ if filter_category.strip() != "":
 
 st.dataframe(df)
 
-# --- Expense Category Chart ---
+# --- Expense Category Pie Chart ---
 st.header("Expenses by Category 🥡")
 category_data = get_category_data()
 if category_data:
