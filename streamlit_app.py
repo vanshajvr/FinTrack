@@ -1,251 +1,167 @@
-# streamlit_app.py
 import streamlit as st
 import pandas as pd
 import sqlite3
-import plotly.express as px
 from datetime import datetime
-from pathlib import Path
+import plotly.express as px
+import os
 
-# -------------------------
-# Files & DB
-# -------------------------
-DB_PATH = Path("finance.db")
-CSS_PATH = Path("styles.css")
+# ------------------ DATABASE SETUP ------------------ #
+DB_FILE = "finance.db"
 
-# -------------------------
-# Tiny DB helper functions
-# -------------------------
-def get_conn():
-    return sqlite3.connect(DB_PATH, check_same_thread=False)
+def get_db_connection():
+    conn = sqlite3.connect(DB_FILE)
+    return conn
 
 def init_db():
-    with get_conn() as conn:
-        conn.execute("""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             amount REAL NOT NULL,
-            type TEXT NOT NULL CHECK(type IN ('income','expense')),
+            type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
             category TEXT NOT NULL,
             currency TEXT NOT NULL,
             date TEXT NOT NULL,
             notes TEXT
         )
-        """)
+    """)
+    conn.commit()
+    conn.close()
 
-def add_transaction(amount, ttype, category, currency, date_str, notes=""):
-    with get_conn() as conn:
-        conn.execute(
-            "INSERT INTO transactions (amount, type, category, currency, date, notes) VALUES (?, ?, ?, ?, ?, ?)",
-            (amount, ttype, category, currency, date_str, notes)
-        )
+init_db()
 
-def update_transaction(txn_id, amount, ttype, category, currency, date_str, notes):
-    with get_conn() as conn:
-        conn.execute(
-            "UPDATE transactions SET amount=?, type=?, category=?, currency=?, date=?, notes=? WHERE id=?",
-            (amount, ttype, category, currency, date_str, notes, txn_id)
-        )
+# ------------------ STREAMLIT PAGE CONFIG ------------------ #
+st.set_page_config(page_title="💰 FinTrack", page_icon="💰", layout="wide")
+st.title("💰 FinTrack - Personal Finance Tracker")
 
-def delete_transaction(txn_id):
-    with get_conn() as conn:
-        conn.execute("DELETE FROM transactions WHERE id=?", (txn_id,))
+# ------------------ SIDEBAR ------------------ #
+st.sidebar.title("Settings")
+if "currency" not in st.session_state:
+    st.session_state.currency = "INR (₹)"
 
-def load_transactions():
-    with get_conn() as conn:
-        df = pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC", conn, parse_dates=["date"])
+currency = st.sidebar.selectbox(
+    "🌍 Choose Currency",
+    ["INR (₹)", "USD ($)", "EUR (€)", "GBP (£)"],
+    index=["INR (₹)", "USD ($)", "EUR (€)", "GBP (£)"].index(st.session_state.currency)
+)
+st.session_state.currency = currency
+
+menu = st.sidebar.radio("Navigate", ["➕ Add Transaction", "📊 Dashboard", "📜 View Transactions"])
+
+# ------------------ FUNCTIONS ------------------ #
+def add_transaction(amount, ttype, category, currency, date_str, notes):
+    conn = get_db_connection()
+    conn.execute(
+        "INSERT INTO transactions (amount, type, category, currency, date, notes) VALUES (?, ?, ?, ?, ?, ?)",
+        (amount, ttype, category, currency, date_str, notes)
+    )
+    conn.commit()
+    conn.close()
+
+def get_transactions_df():
+    conn = get_db_connection()
+    df = pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC", conn)
+    conn.close()
     return df
 
-# -------------------------
-# App UI helpers
-# -------------------------
-def inject_css():
-    if CSS_PATH.exists():
-        st.markdown(f"<style>{CSS_PATH.read_text()}</style>", unsafe_allow_html=True)
+def delete_transaction(txn_id):
+    conn = get_db_connection()
+    conn.execute("DELETE FROM transactions WHERE id=?", (txn_id,))
+    conn.commit()
+    conn.close()
 
-def header():
-    st.markdown(
-        """
-        <div class="header">
-            <div>
-                <h1 class="title">💰 FinTrack</h1>
-                <p class="tag">Track smarter · Spend wiser · Save faster</p>
-            </div>
-            <div class="small-meta">v2.0</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+def update_transaction(txn_id, amount, ttype, category, currency, date_str, notes):
+    conn = get_db_connection()
+    conn.execute("""
+        UPDATE transactions
+        SET amount=?, type=?, category=?, currency=?, date=?, notes=?
+        WHERE id=?
+    """, (amount, ttype, category, currency, date_str, notes, txn_id))
+    conn.commit()
+    conn.close()
 
-def nav_menu():
-    choice = st.sidebar.radio(
-        "",
-        ("🏠 Overview", "➕ Add", "✏️ Edit / Delete", "📜 Transactions"),
-        index=0
-    )
-    st.sidebar.markdown("---")
-    # filters in sidebar
-    currencies = ["All", "INR", "USD", "EUR", "GBP", "JPY"]
-    sel_currency = st.sidebar.selectbox("Show currency", currencies, index=0)
-    date_min, date_max = st.sidebar.date_input("Date range",
-                                               value=(datetime.today().replace(day=1).date(), datetime.today().date()))
-    st.sidebar.markdown("## Quick actions")
-    if st.sidebar.button("Export CSV"):
-        df_all = load_transactions()
-        csv = df_all.to_csv(index=False).encode("utf-8")
-        st.sidebar.download_button("Download CSV", csv, "transactions.csv", "text/csv")
-    return choice, sel_currency, date_min, date_max
+# ------------------ ADD TRANSACTION ------------------ #
+if menu == "➕ Add Transaction":
+    st.header("➕ Add New Transaction")
+    col1, col2 = st.columns(2)
+    with col1:
+        amount = st.number_input("💵 Amount", min_value=1.0, step=100.0)
+        ttype = st.selectbox("Transaction Type", ["income", "expense"])
+    with col2:
+        category = st.text_input("📂 Category", "General")
+        date_val = st.date_input("📅 Date", datetime.today())
+        notes = st.text_area("📝 Notes", "")
 
-def summary_cards(df):
+    if st.button("Add Transaction"):
+        add_transaction(amount, ttype, category, st.session_state.currency, date_val.strftime("%Y-%m-%d"), notes)
+        st.success(f"✅ Transaction added successfully in {st.session_state.currency}!")
+
+# ------------------ DASHBOARD ------------------ #
+elif menu == "📊 Dashboard":
+    st.header(f"📊 Dashboard ({st.session_state.currency})")
+    df = get_transactions_df()
+    df = df[df["currency"] == st.session_state.currency]
+
     if df.empty:
-        st.info("No transactions to show. Add your first transaction.")
-        return
-    # totals per selected currency already filtered upstream
-    income = df[df["type"] == "income"]["amount"].sum()
-    expense = df[df["type"] == "expense"]["amount"].sum()
-    balance = income - expense
-
-    c1, c2, c3 = st.columns(3)
-    c1.markdown(f'<div class="card income"><div class="card-title">Income</div><div class="card-value">₹{income:,.2f}</div></div>', unsafe_allow_html=True)
-    c2.markdown(f'<div class="card expense"><div class="card-title">Expense</div><div class="card-value">₹{expense:,.2f}</div></div>', unsafe_allow_html=True)
-    c3.markdown(f'<div class="card balance"><div class="card-title">Balance</div><div class="card-value">₹{balance:,.2f}</div></div>', unsafe_allow_html=True)
-
-# -------------------------
-# Initialize DB & CSS
-# -------------------------
-init_db()
-inject_css()
-
-# -------------------------
-# Page header
-# -------------------------
-header()
-
-# -------------------------
-# Sidebar navigation + filters
-# -------------------------
-menu_choice, sel_currency, date_min, date_max = nav_menu()
-
-# -------------------------
-# Load and filter data
-# -------------------------
-df = load_transactions()
-# ensure date is datetime
-if not df.empty:
-    df["date"] = pd.to_datetime(df["date"]).dt.date
-
-# apply filters
-if sel_currency != "All" and not df.empty:
-    df = df[df["currency"] == sel_currency]
-if not df.empty:
-    df = df[(df["date"] >= date_min) & (df["date"] <= date_max)]
-
-# -------------------------
-# MENU: Overview
-# -------------------------
-if menu_choice == "🏠 Overview":
-    st.subheader("Overview")
-    # currency selector on top
-    col_top = st.columns([3,1])
-    if df.empty:
-        st.info("No data in the selected range/currency. Add transactions via the Add tab.")
+        st.info("No transactions yet. Add some to see insights!")
     else:
-        # show cards (we'll display values with currency symbol from data if mixed currency show 'Multiple')
-        summary_cards(df)
+        total_income = df[df['type']=="income"]['amount'].sum()
+        total_expense = df[df['type']=="expense"]['amount'].sum()
+        balance = total_income - total_expense
+        currency_symbol = st.session_state.currency.split()[1]
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("💰 Total Income", f"{currency_symbol}{total_income:,.2f}")
+        col2.metric("💸 Total Expense", f"{currency_symbol}{total_expense:,.2f}")
+        col3.metric("🏦 Balance", f"{currency_symbol}{balance:,.2f}")
 
         st.markdown("---")
-        # Top categories (Expense)
-        left, right = st.columns([2,1])
-        with left:
-            expense_df = df[df["type"] == "expense"]
+        col1, col2 = st.columns(2)
+
+        # Pie chart for expenses
+        with col1:
+            expense_df = df[df['type']=='expense']
             if not expense_df.empty:
-                by_cat = expense_df.groupby("category", as_index=False)["amount"].sum().sort_values("amount", ascending=False).head(8)
-                fig = px.bar(by_cat, x="category", y="amount", title="Top Spending Categories", text="amount")
+                fig = px.pie(expense_df, names='category', values='amount', title="Expense by Category")
                 st.plotly_chart(fig, use_container_width=True)
-        with right:
-            st.write("Quick stats")
-            st.write(f"Transactions: **{len(df)}**")
-            st.write(f"Start: **{df['date'].min()}**")
-            st.write(f"End: **{df['date'].max()}**")
+            else:
+                st.warning("No expense data to display.")
 
-        st.markdown("---")
-        # trend
-        trend = df.groupby(["date","currency"], as_index=False)["amount"].sum()
-        if not trend.empty:
-            fig2 = px.line(trend.sort_values("date"), x="date", y="amount", color="currency", title="Daily Trend by Currency", markers=True)
+        # Bar chart for monthly summary
+        with col2:
+            df['date'] = pd.to_datetime(df['date'])
+            df['month'] = df['date'].dt.strftime('%Y-%m')
+            monthly_summary = df.groupby(['month','type'])['amount'].sum().reset_index()
+            fig2 = px.bar(monthly_summary, x='month', y='amount', color='type', barmode='group', title="Monthly Income vs Expense")
             st.plotly_chart(fig2, use_container_width=True)
 
-# -------------------------
-# MENU: Add
-# -------------------------
-elif menu_choice == "➕ Add":
-    st.subheader("Add transaction")
-    with st.form("add_form", clear_on_submit=True):
-        c1, c2 = st.columns(2)
-        with c1:
-            amount = st.number_input("Amount", min_value=0.01, format="%.2f")
-            ttype = st.selectbox("Type", ["expense","income"])
-            category = st.selectbox("Category", ["Food","Transport","Shopping","Bills","Salary","Other"])
-        with c2:
-            currency = st.selectbox("Currency", ["INR","USD","EUR","GBP","JPY"], index=0)
-            date_val = st.date_input("Date", datetime.today())
-            notes = st.text_input("Notes (optional)")
-        submitted = st.form_submit_button("Add transaction")
-        if submitted:
-            add_transaction(amount, ttype, category, currency, date_val.strftime("%Y-%m-%d"), notes)
-            st.success("Transaction added ✅")
+# ------------------ VIEW TRANSACTIONS ------------------ #
+elif menu == "📜 View Transactions":
+    st.header("📜 Transaction History")
+    df_all = get_transactions_df()
+    df_all = df_all[df_all["currency"] == st.session_state.currency]
 
-# -------------------------
-# MENU: Edit / Delete
-# -------------------------
-elif menu_choice == "✏️ Edit / Delete":
-    st.subheader("Edit or Delete transactions")
-
-    df_all = load_transactions()
     if df_all.empty:
-        st.info("No transactions yet.")
+        st.info("No transactions found for the selected currency.")
     else:
         st.dataframe(df_all[["id","date","type","category","amount","currency","notes"]])
-        st.markdown("---")
-        sel_id = st.number_input("Enter transaction ID to edit/delete", min_value=1, step=1)
-        if sel_id:
-            sel_row = df_all[df_all["id"] == sel_id]
-            if sel_row.empty:
-                st.warning("Transaction ID not found.")
-            else:
-                row = sel_row.iloc[0]
-                with st.form("edit_form"):
-                    e_amount = st.number_input("Amount", value=float(row["amount"]))
-                    e_type = st.selectbox("Type", ["expense","income"], index=0 if row["type"]=="expense" else 1)
-                    e_category = st.text_input("Category", value=row["category"])
-                    e_currency = st.selectbox("Currency", ["INR","USD","EUR","GBP","JPY"], index=["INR","USD","EUR","GBP","JPY"].index(row["currency"]))
-                    e_date = st.date_input("Date", value=datetime.strptime(row["date"], "%Y-%m-%d"))
-                    e_notes = st.text_input("Notes", value=row.get("notes","") or "")
-                    save = st.form_submit_button("Save changes")
-                    delete = st.form_submit_button("Delete transaction")
-                    if save:
-                        update_transaction(sel_id, e_amount, e_type, e_category, e_currency, e_date.strftime("%Y-%m-%d"), e_notes)
-                        st.success("Updated ✅")
-                    if delete:
-                        delete_transaction(sel_id)
-                        st.success("Deleted ✅")
 
-# -------------------------
-# MENU: Transactions
-# -------------------------
-elif menu_choice == "📜 Transactions":
-    st.subheader("All Transactions")
-    df_show = load_transactions()
-    if df_show.empty:
-        st.info("No transactions yet.")
-    else:
-        st.dataframe(df_show, use_container_width=True)
+        # Edit/Delete
+        selected_id = st.number_input("Enter Transaction ID to Edit/Delete", min_value=1, step=1)
+        if st.button("Delete Transaction"):
+            delete_transaction(selected_id)
+            st.success(f"Transaction ID {selected_id} deleted!")
         st.markdown("---")
-        # quick download for current view
-        csv = df_show.to_csv(index=False).encode("utf-8")
-        st.download_button("Export full CSV", csv, "transactions_all.csv", "text/csv")
-
-# -------------------------
-# Footer
-# -------------------------
-st.markdown("<hr/>", unsafe_allow_html=True)
-st.caption("FinTrack — polished demo UI • Built with Streamlit")
+        st.subheader("Edit Transaction")
+        txn_to_edit = df_all[df_all["id"]==selected_id]
+        if not txn_to_edit.empty:
+            row = txn_to_edit.iloc[0]
+            edit_amount = st.number_input("Amount", value=row['amount'])
+            edit_type = st.selectbox("Type", ["income","expense"], index=0 if row['type']=="income" else 1)
+            edit_category = st.text_input("Category", value=row['category'])
+            edit_date = st.date_input("Date", pd.to_datetime(row['date']))
+            edit_notes = st.text_area("Notes", value=row['notes'] if row['notes'] else "")
+            if st.button("Save Changes"):
+                update_transaction(selected_id, edit_amount, edit_type, edit_category, st.session_state.currency, edit_date.strftime("%Y-%m-%d"), edit_notes)
+                st.success("✅ Transaction updated successfully!")
