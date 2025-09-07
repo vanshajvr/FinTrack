@@ -1,4 +1,9 @@
+# Ignore local database
+finance.db
+
+# Ignore environment variables
+.env
+
+# Python cache
 __pycache__/
 *.pyc
-*.db
-.env
