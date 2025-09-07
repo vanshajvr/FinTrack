@@ -7,3 +7,5 @@ finance.db
 # Python cache
 __pycache__/
 *.pyc
+
+finance.db
