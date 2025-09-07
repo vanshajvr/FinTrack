@@ -36,32 +36,62 @@ def init_db():
 
 init_db()
 
-# ------------------ STREAMLIT CONFIG ------------------ #
+# ------------------ APP CONFIG ------------------ #
 st.set_page_config(
     page_title="FinTrack - Personal Finance Dashboard",
     page_icon="💰",
     layout="wide",
 )
 
-# ------------------ SIDEBAR ------------------ #
-st.sidebar.title("FinTrack")
-st.sidebar.markdown("Manage your income and expenses smartly!")
+# ------------------ DARK/LIGHT MODE ------------------ #
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
 
-# Currency selector
+# ------------------ NAVIGATION ------------------ #
+if "menu" not in st.session_state:
+    st.session_state.menu = "Home"
+
+# Home page navigation buttons
+if st.session_state.menu == "Home":
+    st.title("FinTrack - Personal Finance Dashboard")
+    st.markdown("""
+    **Features:**
+    - Add and track your income and expenses
+    - Filter transactions by currency
+    - View sleek visual dashboards
+    - Download transaction history as CSV
+
+    **Navigation:**
+    """)
+    
+    col1, col2, col3 = st.columns(3)
+    if col1.button("Add Transaction"):
+        st.session_state.menu = "Add Transaction"
+    if col2.button("Dashboard"):
+        st.session_state.menu = "Dashboard"
+    if col3.button("View Transactions"):
+        st.session_state.menu = "View Transactions"
+    
+    st.markdown("---")
+    st.markdown("""
+    **About the Creator:**  
+    Built by [Vanshaj Verma](https://www.linkedin.com/in/vanshajverma60)  
+    GitHub: [Your GitHub](https://github.com/vanshajvr)
+    """)
+
+# ------------------ CURRENCY SELECTION ------------------ #
 if "currency" not in st.session_state:
     st.session_state.currency = "INR"
-currency = st.sidebar.selectbox(
+
+currency = st.selectbox(
     "Select Currency", ["INR", "USD", "EUR", "GBP"],
     index=["INR","USD","EUR","GBP"].index(st.session_state.currency)
 )
 st.session_state.currency = currency
 
-# Dark/light mode toggle
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
-st.session_state.dark_mode = st.sidebar.checkbox("Dark Mode", value=st.session_state.dark_mode)
+# ------------------ DARK MODE TOGGLE ------------------ #
+st.session_state.dark_mode = st.checkbox("Dark Mode", value=st.session_state.dark_mode)
 
-# Colors based on mode
 if st.session_state.dark_mode:
     bg_color = "#121212"
     text_color = "#f0f0f0"
@@ -79,32 +109,10 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Sidebar navigation
-menu_options = ["Home","Add Transaction","Dashboard","View Transactions"]
-menu = st.sidebar.selectbox("Navigate", menu_options)
-
-# ------------------ HOME ------------------ #
-if menu == "Home":
-    st.title("FinTrack - Your Personal Finance Dashboard")
-    st.markdown("""
-    **Features:**
-    - Add and track your income and expenses
-    - Filter transactions by currency
-    - View sleek visual dashboards
-    - Download transaction history as CSV
-
-    **About the Creator:**
-    - Built by [Vanshaj Verma](https://www.linkedin.com/in/vanshajverma60)
-    - GitHub: [Your GitHub](https://github.com/vanshajvr)
-    """)
-    st.markdown("---")
-
 # ------------------ ADD TRANSACTION ------------------ #
-# ------------------ ADD TRANSACTION ------------------ #
-elif menu == "Add Transaction":
-    st.title("Add New Transaction")
+if st.session_state.menu == "Add Transaction":
+    st.header("Add New Transaction")
 
-    # Predefined categories
     categories = ["Salary", "Food", "Travel", "Entertainment", "Shopping", "Bills", "Health", "General"]
 
     col1, col2 = st.columns(2)
@@ -112,12 +120,8 @@ elif menu == "Add Transaction":
         amount = st.number_input("Amount", min_value=1.0, step=100.0)
         trans_type = st.selectbox("Transaction Type", ["income", "expense"])
     with col2:
-        # Category selection with option to add custom
         category_option = st.selectbox("Select Category", categories + ["Other"])
-        if category_option == "Other":
-            category = st.text_input("Enter Category")
-        else:
-            category = category_option
+        category = st.text_input("Enter Category") if category_option == "Other" else category_option
         date = st.date_input("Date", datetime.today())
 
     if st.button("Add Transaction"):
@@ -134,10 +138,8 @@ elif menu == "Add Transaction":
             st.success(f"Transaction added successfully in {st.session_state.currency}!")
 
 # ------------------ DASHBOARD ------------------ #
-elif menu == "Dashboard":
-    st.title("Finance Dashboard")
-    st.markdown(f"Visual insights ({st.session_state.currency})")
-
+elif st.session_state.menu == "Dashboard":
+    st.header("Finance Dashboard")
     conn = get_db_connection()
     df = pd.read_sql_query("SELECT * FROM transactions", conn)
     conn.close()
@@ -168,8 +170,6 @@ elif menu == "Dashboard":
             fig.update_layout(paper_bgcolor=card_color, plot_bgcolor=card_color,
                               font=dict(color=text_color, family="Arial"))
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("No expense data for selected currency.")
 
         # Bar chart
         df['date'] = pd.to_datetime(df['date'])
@@ -183,8 +183,8 @@ elif menu == "Dashboard":
         st.plotly_chart(fig2, use_container_width=True)
 
 # ------------------ VIEW TRANSACTIONS ------------------ #
-elif menu == "View Transactions":
-    st.title("Transaction History")
+elif st.session_state.menu == "View Transactions":
+    st.header("Transaction History")
     conn = get_db_connection()
     df = pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC", conn)
     conn.close()
