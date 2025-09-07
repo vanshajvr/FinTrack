@@ -2,30 +2,28 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import sqlite3
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
-# Get the directory of the current file
+# Database setup
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Define the path to the SQLite database file
 DATABASE_FILE = os.path.join(BASE_DIR, 'finance.db')
 
 def get_db_connection():
-    """Establishes and returns a new connection to the SQLite database."""
     conn = sqlite3.connect(DATABASE_FILE)
-    conn.row_factory = sqlite3.Row  # This allows accessing columns by name
+    conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
-    """Initializes the database by creating the transactions table if it doesn't exist."""
+    """Create transactions table if it doesn't exist."""
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             amount REAL NOT NULL,
-            type TEXT NOT NULL,
+            type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
             category TEXT NOT NULL,
             date TEXT NOT NULL
         )
@@ -33,39 +31,52 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Initialize the database when the app starts
+# Initialize DB
 with app.app_context():
     init_db()
 
 @app.route('/api/transactions', methods=['POST'])
 def add_transaction():
-    """Adds a new transaction to the database."""
+    """Add a new transaction."""
     data = request.get_json()
-    if not data or 'amount' not in data or 'type' not in data:
-        return jsonify({"error": "Missing data"}), 400
+    
+    # Validation
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    if 'amount' not in data or not isinstance(data['amount'], (int, float)):
+        return jsonify({"error": "Amount is required and must be a number"}), 400
+    if 'type' not in data or data['type'] not in ('income', 'expense'):
+        return jsonify({"error": "Type must be 'income' or 'expense'"}), 400
+    
+    amount = data['amount']
+    trans_type = data['type']
+    category = data.get('category', 'Uncategorized')
+    date = data.get('date', datetime.now().strftime("%Y-%m-%d"))
 
-    conn = get_db_connection()
     try:
+        conn = get_db_connection()
         conn.execute(
             "INSERT INTO transactions (amount, type, category, date) VALUES (?, ?, ?, ?)",
-            (data['amount'], data['type'], data.get('category', 'Uncategorized'), data.get('date', ''))
+            (amount, trans_type, category, date)
         )
         conn.commit()
+        conn.close()
+        return jsonify({"message": "Transaction added successfully"}), 201
     except sqlite3.Error as e:
         conn.close()
         return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
-
-    return jsonify({"message": "Transaction added successfully"}), 201
 
 @app.route('/api/transactions', methods=['GET'])
 def get_transactions():
-    """Retrieves all transactions from the database."""
+    """Retrieve all transactions."""
     conn = get_db_connection()
-    transactions = conn.execute("SELECT * FROM transactions ORDER BY date DESC").fetchall()
+    transactions = conn.execute(
+        "SELECT * FROM transactions ORDER BY date DESC"
+    ).fetchall()
     conn.close()
     
-    # Convert Row objects to dictionaries for JSON serialization
     transactions_list = [dict(row) for row in transactions]
     return jsonify(transactions_list), 200
+
+if __name__ == "__main__":
+    app.run(debug=True)
