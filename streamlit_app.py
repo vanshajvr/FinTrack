@@ -7,6 +7,19 @@ import plotly.express as px
 # ------------------ PAGE CONFIG ------------------
 st.set_page_config(page_title="FinTrack", page_icon="💰", layout="wide")
 
+# ------------------ TITLE AT TOP ------------------
+st.markdown(
+    """
+    <h1 style="text-align: center; color: #2E86DE; font-size: 48px;">
+        💰 FinTrack — Personal Finance Tracker
+    </h1>
+    <p style="text-align: center; font-size: 18px; color: #555;">
+        Track your income, expenses, and insights — all in one place!
+    </p>
+    """,
+    unsafe_allow_html=True
+)
+
 # ------------------ DATABASE SETUP ------------------
 conn = sqlite3.connect("transactions.db", check_same_thread=False)
 c = conn.cursor()
@@ -114,4 +127,7 @@ with tab3:
 
 # ------------------ FOOTER ------------------
 st.markdown("---")
-st.markdown("💡 **FinTrack** — Smart way to track your expenses 💸")
+st.markdown(
+    "<p style='text-align: center; color: grey;'>💡 <b>FinTrack</b> — Smart way to track your expenses 💸</p>",
+    unsafe_allow_html=True
+)
