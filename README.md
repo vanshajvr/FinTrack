@@ -1,31 +1,30 @@
-# FinTrack
+# FinTrack 💰
 
-**Take control of your money, one transaction at a time.**
+**Take control of your money, one transaction at a time.**  
 
-FinTrack is a full-stack web application that helps users track, categorize, and visualize their personal income and expenses. It provides a simple and intuitive interface to manage finances and gain insights into spending habits.
+FinTrack is a **pure Streamlit app** for tracking personal income and expenses. Add transactions, categorize them, and visualize your finances—all in one interactive dashboard. Fully deployable on **Streamlit Cloud** for free.
 
 ---
 
 ## Features
 - Add income and expense transactions
-- Categorize transactions for better clarity
-- View transactions in a clean list
-- Visualize financial data using interactive charts (via Streamlit frontend)
-- Robust backend with Flask and SQLite
+- Categorize transactions
+- View all transactions in a clean list
+- Summary of total income, expenses, and balance
+- Built entirely in Streamlit with SQLite database
 
 ---
 
 ## Tech Stack
-- **Backend:** Flask, SQLite
-- **Frontend:** Streamlit
-- **Other:** Flask-CORS, Requests
-- **Deployment:** Streamlit Cloud / Heroku
+- **Frontend & Backend:** Streamlit
+- **Database:** SQLite
+- **Deployment:** Streamlit Cloud (free)
 
 ---
 
 ## Installation
 
-1. Clone the repository:
+1. Clone the repository:  
 ```bash
 git clone https://github.com/your-username/FinTrack.git
 cd FinTrack
@@ -54,23 +53,18 @@ streamlit run streamlit_app.py
 
 ## Usage
 1. Open the Streamlit app in your browser.
-2. Add transactions using the form (amount, type, category).
-3. View your transactions and track your finances.
-4. (Optional) Visualize trends and summaries using charts.
+2. Add income or expense transactions using the form.
+3. View all transactions and track your finances.
+4. Check your balance summary at a glance.
 ---
 
 ## Folder Structure
 ```
 FinTrack/
-│
-├─ app.py                 # Flask backend
-├─ streamlit_app.py       # Streamlit frontend
-├─ requirements.txt       # Python dependencies
-├─ Procfile               # Deployment instructions
-├─ runtime.txt            # Python version
-├─ finance.db             # SQLite database
-├─ .gitignore             # Ignored files
-└─ README.md              # Project documentation
+├─ streamlit_app.py
+├─ requirements.txt
+├─ finance.db   # created automatically
+└─ README.md
 ```
 ---
 
@@ -79,6 +73,6 @@ FinTrack/
 ---
 
 ## License
-- This project is open-source and free to use under the MIT License.
+- MIT License
 ---
 
