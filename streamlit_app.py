@@ -13,7 +13,6 @@ def get_db_connection():
 
 def init_db():
     conn = get_db_connection()
-    # Check if 'currency' column exists
     cursor = conn.cursor()
     cursor.execute("PRAGMA table_info(transactions)")
     columns = [info[1] for info in cursor.fetchall()]
@@ -22,7 +21,6 @@ def init_db():
         conn.execute("ALTER TABLE transactions ADD COLUMN currency TEXT DEFAULT 'INR'")
         conn.commit()
 
-    # Create table if it doesn't exist
     conn.execute("""
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,9 +94,8 @@ if menu == "Home":
     - Download transaction history as CSV
 
     **About the Creator:**
-    - Built by [Vanshaj Verma]
-    - Aspiring Developer
-    [GitHub]{https://www.github.com/vanshajvr}
+    - Built by [Your Name](https://www.linkedin.com/in/your-linkedin)
+    - GitHub: [Your GitHub](https://github.com/your-github)
     """)
     st.markdown("---")
 
