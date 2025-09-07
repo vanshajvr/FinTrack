@@ -26,37 +26,58 @@ conn.commit()
 # STREAMLIT CONFIGURATION
 # -----------------------------
 st.set_page_config(
-    page_title="FinTrack - Personal Finance Dashboard",
+    page_title="FinTrack Dashboard",
     page_icon="💰",
     layout="wide",
 )
 
 # -----------------------------
-# CUSTOM STYLING
+# CUSTOM PREMIUM STYLING
 # -----------------------------
 st.markdown(
     """
     <style>
+        /* Background */
         .main {
-            background-color: #f8f9fa;
+            background-color: #f7f9fc;
+            font-family: 'Segoe UI', sans-serif;
         }
-        div[data-testid="stMetricValue"] {
-            font-size: 28px;
-            font-weight: bold;
+
+        /* Cards for metrics */
+        .card {
+            padding: 20px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
         }
-        h1, h2, h3 {
-            color: #2c3e50;
-        }
+
+        /* Buttons */
         .stButton>button {
             background-color: #4CAF50;
             color: white;
             border-radius: 8px;
-            height: 40px;
+            height: 42px;
             font-size: 16px;
+            border: none;
+            transition: all 0.3s;
         }
         .stButton>button:hover {
-            background-color: #45a049;
-            color: white;
+            background-color: #43a047;
+            transform: scale(1.03);
+        }
+
+        /* Headings */
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+            color: grey;
         }
     </style>
     """,
@@ -66,8 +87,8 @@ st.markdown(
 # -----------------------------
 # HEADER
 # -----------------------------
-st.title("💰 FinTrack")
-st.caption("Track your income, expenses, and savings with style 🚀")
+st.title("💰 FinTrack Dashboard")
+st.caption("Manage your finances with insights, trends, and analytics 🚀")
 
 # -----------------------------
 # SIDEBAR INPUTS
@@ -99,54 +120,120 @@ df = pd.read_sql("SELECT * FROM transactions", conn)
 # DASHBOARD LAYOUT
 # -----------------------------
 if not df.empty:
+    # -----------------------------
+    # METRICS CARDS
+    # -----------------------------
     col1, col2, col3 = st.columns(3)
 
     total_income = df[df["type"] == "Income"]["amount"].sum()
     total_expense = df[df["type"] == "Expense"]["amount"].sum()
     balance = total_income - total_expense
 
-    col1.metric("💵 Total Income", f"{total_income:.2f}")
-    col2.metric("💸 Total Expense", f"{total_expense:.2f}")
-    col3.metric("🏦 Balance", f"{balance:.2f}")
+    with col1:
+        st.markdown(f"""
+            <div class="card">
+                <h3>💵 Total Income</h3>
+                <h2 style="color:#2ecc71;">{total_income:.2f} {df['currency'].iloc[-1]}</h2>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown(f"""
+            <div class="card">
+                <h3>💸 Total Expense</h3>
+                <h2 style="color:#e74c3c;">{total_expense:.2f} {df['currency'].iloc[-1]}</h2>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown(f"""
+            <div class="card">
+                <h3>🏦 Balance</h3>
+                <h2 style="color:#3498db;">{balance:.2f} {df['currency'].iloc[-1]}</h2>
+            </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("---")
 
     # -----------------------------
+    # FILTERS
+    # -----------------------------
+    st.subheader("🔍 Filter Data")
+    col1, col2 = st.columns(2)
+    with col1:
+        month_filter = st.selectbox(
+            "Select Month",
+            ["All"] + sorted(df["date"].apply(lambda x: x[:7]).unique().tolist())
+        )
+    with col2:
+        type_filter = st.multiselect(
+            "Select Transaction Type",
+            options=df["type"].unique(),
+            default=df["type"].unique()
+        )
+
+    filtered_df = df.copy()
+    if month_filter != "All":
+        filtered_df = filtered_df[filtered_df["date"].str.startswith(month_filter)]
+    filtered_df = filtered_df[filtered_df["type"].isin(type_filter)]
+
+    # -----------------------------
     # TABS FOR VISUALIZATION
     # -----------------------------
-    tab1, tab2 = st.tabs(["📊 Dashboard", "📜 Transactions"])
+    tab1, tab2, tab3 = st.tabs(["📊 Overview", "📈 Trends", "📜 Transactions"])
 
+    # -----------------------------
+    # TAB 1: Overview
+    # -----------------------------
     with tab1:
         col1, col2 = st.columns(2)
 
         # Income vs Expense Pie Chart
         fig1 = px.pie(
-            df,
+            filtered_df,
             names="type",
             values="amount",
             color="type",
-            color_discrete_map={"Income": "#00b894", "Expense": "#d63031"},
-            title="Income vs Expense",
+            color_discrete_map={"Income": "#27ae60", "Expense": "#e74c3c"},
+            title="Income vs Expense Distribution",
         )
         col1.plotly_chart(fig1, use_container_width=True)
 
         # Expense Breakdown by Category
-        expense_df = df[df["type"] == "Expense"]
+        expense_df = filtered_df[filtered_df["type"] == "Expense"]
         if not expense_df.empty:
             fig2 = px.bar(
                 expense_df,
                 x="category",
                 y="amount",
                 color="category",
-                title="Expense Breakdown",
+                title="Expense Breakdown by Category",
                 text_auto=True,
             )
             col2.plotly_chart(fig2, use_container_width=True)
         else:
-            col2.info("No expense data yet 🚀")
+            col2.info("No expense data available 🚀")
 
+    # -----------------------------
+    # TAB 2: Trends
+    # -----------------------------
     with tab2:
-        st.dataframe(df, use_container_width=True)
+        df_sorted = filtered_df.sort_values(by="date")
+        fig3 = px.line(
+            df_sorted,
+            x="date",
+            y="amount",
+            color="type",
+            markers=True,
+            title="Transaction Trends Over Time"
+        )
+        st.plotly_chart(fig3, use_container_width=True)
+
+    # -----------------------------
+    # TAB 3: Transactions Table
+    # -----------------------------
+    with tab3:
+        st.dataframe(filtered_df, use_container_width=True)
 
 else:
     st.info("No transactions yet. Start adding some from the sidebar!")
@@ -156,6 +243,6 @@ else:
 # -----------------------------
 st.markdown("---")
 st.markdown(
-    "<div style='text-align: center; color: grey;'>Built with ❤️ using Streamlit</div>",
+    "<div class='footer'>💻 Built with ❤️ using Streamlit | FinTrack © 2025</div>",
     unsafe_allow_html=True,
 )
