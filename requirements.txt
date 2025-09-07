@@ -1,4 +1,6 @@
 streamlit
 pandas
 plotly
-forex-python
+sqlalchemy
+psycopg2-binary
+python-dotenv
