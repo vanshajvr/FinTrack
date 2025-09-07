@@ -49,13 +49,19 @@ st.set_page_config(
 st.sidebar.title("FinTrack")
 menu = st.sidebar.radio("Navigation", ["Home", "Dashboard", "Add Transaction", "View Transactions"])
 
-# Currency selector
-if "currency" not in st.session_state:
+currency_options = ["INR", "USD", "EUR", "GBP"]
+
+# Initialize default safely
+if "currency" not in st.session_state or st.session_state.currency not in currency_options:
     st.session_state.currency = "INR"
+
 currency = st.sidebar.selectbox(
-    "Select Currency", ["INR", "USD", "EUR", "GBP"], index=["INR","USD","EUR","GBP"].index(st.session_state.currency)
+    "Select Currency",
+    currency_options,
+    index=currency_options.index(st.session_state.currency)
 )
 st.session_state.currency = currency
+
 
 # Dark/Light Mode
 if "theme" not in st.session_state:
