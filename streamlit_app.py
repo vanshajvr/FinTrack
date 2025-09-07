@@ -88,9 +88,9 @@ if menu == "Home":
     # About Me
     st.subheader("About the Creator")
     st.markdown("""
-    **Your Name**  
+    **Vanshaj Verma**  
     B.Tech Student | Aspiring Developer  
-    [GitHub](https://github.com/) | [LinkedIn](https://www.linkedin.com/)
+    [GitHub](https://github.com/vanshajvr) | [LinkedIn](https://www.linkedin.com/vanshajverma60/)
     """)
 
 # ------------------ ADD TRANSACTION ------------------ #
