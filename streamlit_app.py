@@ -13,6 +13,14 @@ def get_db_connection():
 
 def init_db():
     conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(transactions)")
+    columns = [info[1] for info in cursor.fetchall()]
+
+    if 'currency' not in columns:
+        conn.execute("ALTER TABLE transactions ADD COLUMN currency TEXT DEFAULT 'INR'")
+        conn.commit()
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,8 +36,12 @@ def init_db():
 
 init_db()
 
-# ------------------ PAGE CONFIG ------------------ #
-st.set_page_config(page_title="FinTrack", page_icon="💰", layout="wide")
+# ------------------ STREAMLIT CONFIG ------------------ #
+st.set_page_config(
+    page_title="FinTrack - Personal Finance Dashboard",
+    page_icon="💰",
+    layout="wide",
+)
 
 # ------------------ SIDEBAR ------------------ #
 st.sidebar.title("FinTrack")
@@ -39,31 +51,60 @@ st.sidebar.markdown("Manage your income and expenses smartly!")
 if "currency" not in st.session_state:
     st.session_state.currency = "INR"
 currency = st.sidebar.selectbox(
-    "Select Currency", ["INR", "USD", "EUR", "GBP"], 
+    "Select Currency", ["INR", "USD", "EUR", "GBP"],
     index=["INR","USD","EUR","GBP"].index(st.session_state.currency)
 )
 st.session_state.currency = currency
 
-# Navigation
-menu = st.sidebar.radio("Navigate", ["Home", "Add Transaction", "Dashboard", "View Transactions"])
+# Dark/light mode toggle
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+st.session_state.dark_mode = st.sidebar.checkbox("Dark Mode", value=st.session_state.dark_mode)
+
+# Colors based on mode
+if st.session_state.dark_mode:
+    bg_color = "#121212"
+    text_color = "#f0f0f0"
+    card_color = "#1f1f1f"
+else:
+    bg_color = "#f9f9f9"
+    text_color = "#111111"
+    card_color = "#ffffff"
+
+st.markdown(f"""
+    <style>
+        body {{ background-color: {bg_color}; color: {text_color}; }}
+        .stButton>button {{ background-color: {card_color}; color: {text_color}; }}
+        .stDataFrame>div {{ background-color: {card_color}; color: {text_color}; }}
+    </style>
+""", unsafe_allow_html=True)
+
+# Sidebar navigation
+menu_options = ["Home","Add Transaction","Dashboard","View Transactions"]
+menu = st.sidebar.selectbox("Navigate", menu_options)
 
 # ------------------ HOME ------------------ #
 if menu == "Home":
-    st.title("FinTrack - Personal Finance Tracker")
+    st.title("FinTrack - Your Personal Finance Dashboard")
     st.markdown("""
-    FinTrack helps you track your **income and expenses** effortlessly.
-    
     **Features:**
-    - Add transactions with categories
-    - View transaction history
-    - Interactive dashboard with charts
-    """)
-    st.markdown("**Creator:** [GitHub](https://github.com/yourusername) | [LinkedIn](https://www.linkedin.com/in/yourprofile/)")
+    - Add and track your income and expenses
+    - Filter transactions by currency
+    - View sleek visual dashboards
+    - Download transaction history as CSV
 
+    **About the Creator:**
+    - Built by [Vanshaj Verma](https://www.linkedin.com/in/vanshajverma60)
+    - GitHub: [Your GitHub](https://github.com/vanshajvr)
+    """)
+    st.markdown("---")
+
+# ------------------ ADD TRANSACTION ------------------ #
 # ------------------ ADD TRANSACTION ------------------ #
 elif menu == "Add Transaction":
     st.title("Add New Transaction")
 
+    # Predefined categories
     categories = ["Salary", "Food", "Travel", "Entertainment", "Shopping", "Bills", "Health", "General"]
 
     col1, col2 = st.columns(2)
@@ -71,6 +112,7 @@ elif menu == "Add Transaction":
         amount = st.number_input("Amount", min_value=1.0, step=100.0)
         trans_type = st.selectbox("Transaction Type", ["income", "expense"])
     with col2:
+        # Category selection with option to add custom
         category_option = st.selectbox("Select Category", categories + ["Other"])
         if category_option == "Other":
             category = st.text_input("Enter Category")
@@ -94,13 +136,12 @@ elif menu == "Add Transaction":
 # ------------------ DASHBOARD ------------------ #
 elif menu == "Dashboard":
     st.title("Finance Dashboard")
-    st.markdown(f"Insights for {st.session_state.currency}")
+    st.markdown(f"Visual insights ({st.session_state.currency})")
 
     conn = get_db_connection()
     df = pd.read_sql_query("SELECT * FROM transactions", conn)
     conn.close()
 
-    # Filter for selected currency
     df = df[df["currency"] == st.session_state.currency]
 
     if df.empty:
@@ -110,42 +151,36 @@ elif menu == "Dashboard":
         total_income = df[df['type'] == 'income']['amount'].sum()
         total_expense = df[df['type'] == 'expense']['amount'].sum()
         balance = total_income - total_expense
-        currency_symbol = st.session_state.currency
-        col1.metric("Total Income", f"{currency_symbol} {total_income:,.2f}")
-        col2.metric("Total Expense", f"{currency_symbol} {total_expense:,.2f}")
-        col3.metric("Balance", f"{currency_symbol} {balance:,.2f}")
+
+        currency_symbol = st.session_state.currency.split()[0]
+        col1.metric("Total Income", f"{currency_symbol}{total_income:,.2f}")
+        col2.metric("Total Expense", f"{currency_symbol}{total_expense:,.2f}")
+        col3.metric("Balance", f"{currency_symbol}{balance:,.2f}")
 
         st.markdown("---")
         col1, col2 = st.columns(2)
 
-        # Pie chart by category
-        with col1:
-            expense_df = df[df['type'] == 'expense']
-            if not expense_df.empty:
-                fig = px.pie(
-                    expense_df,
-                    names='category',
-                    values='amount',
-                    title="Expense Breakdown by Category",
-                    color_discrete_sequence=px.colors.sequential.Viridis
-                )
-                st.plotly_chart(fig, use_container_width=True)
+        # Pie chart
+        expense_df = df[df['type'] == 'expense']
+        if not expense_df.empty:
+            fig = px.pie(expense_df, names='category', values='amount',
+                         hole=0.3, color_discrete_sequence=px.colors.sequential.Teal)
+            fig.update_layout(paper_bgcolor=card_color, plot_bgcolor=card_color,
+                              font=dict(color=text_color, family="Arial"))
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("No expense data for selected currency.")
 
-        # Bar chart by month
-        with col2:
-            df['date'] = pd.to_datetime(df['date'])
-            df['month'] = df['date'].dt.strftime('%Y-%m')
-            monthly_summary = df.groupby(['month', 'type'])['amount'].sum().reset_index()
-            fig2 = px.bar(
-                monthly_summary,
-                x='month',
-                y='amount',
-                color='type',
-                title="Monthly Income vs Expense",
-                barmode='group',
-                color_discrete_map={'income':'green','expense':'red'}
-            )
-            st.plotly_chart(fig2, use_container_width=True)
+        # Bar chart
+        df['date'] = pd.to_datetime(df['date'])
+        df['month'] = df['date'].dt.strftime('%Y-%m')
+        monthly_summary = df.groupby(['month', 'type'])['amount'].sum().reset_index()
+        fig2 = px.bar(monthly_summary, x='month', y='amount', color='type',
+                      barmode='group', title="Monthly Income vs Expense",
+                      color_discrete_map={'income':'#1f77b4', 'expense':'#ff7f0e'})
+        fig2.update_layout(paper_bgcolor=card_color, plot_bgcolor=card_color,
+                           font=dict(color=text_color, family="Arial"))
+        st.plotly_chart(fig2, use_container_width=True)
 
 # ------------------ VIEW TRANSACTIONS ------------------ #
 elif menu == "View Transactions":
@@ -153,10 +188,11 @@ elif menu == "View Transactions":
     conn = get_db_connection()
     df = pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC", conn)
     conn.close()
+
     df = df[df["currency"] == st.session_state.currency]
 
     if df.empty:
-        st.info("No transactions found for the selected currency.")
+        st.info("No transactions found for selected currency.")
     else:
         st.dataframe(df)
         csv = df.to_csv(index=False).encode("utf-8")
