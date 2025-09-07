@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 import plotly.express as px
 
-# ------------------ DATABASE SETUP ------------------ #
+# ------------------ DATABASE ------------------ #
 DB_FILE = "finance.db"
 
 def get_db_connection():
@@ -30,62 +30,44 @@ def init_db():
 
 init_db()
 
-# ------------------ STREAMLIT PAGE CONFIG ------------------ #
+# ------------------ STREAMLIT CONFIG ------------------ #
 st.set_page_config(page_title="FinTrack", layout="wide")
 
+# ------------------ DARK/LIGHT MODE ------------------ #
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+
+dark_mode = st.sidebar.checkbox("Dark Mode", value=st.session_state.dark_mode)
+st.session_state.dark_mode = dark_mode
+
+# Colors
+if dark_mode:
+    bg_color = "#1e1e2f"
+    text_color = "#f5f6fa"
+    income_color = "#4cd137"
+    expense_color = "#e84118"
+    balance_color = "#00a8ff"
+    card_bg = "#2f3640"
+else:
+    bg_color = "#f5f6fa"
+    text_color = "#2f3640"
+    income_color = "#44bd32"
+    expense_color = "#e84118"
+    balance_color = "#0097e6"
+    card_bg = "white"
+
 # ------------------ CUSTOM STYLES ------------------ #
-st.markdown("""
+st.markdown(f"""
     <style>
-    /* Page background */
-    .stApp {
-        background-color: #f5f6fa;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        color: #2f3640;
-    }
-
-    /* Header */
-    .stHeader {
-        font-size: 38px;
-        font-weight: 700;
-        color: #2f3640;
-        padding-bottom: 20px;
-    }
-
-    /* Sidebar */
-    .css-1d391kg {
-        background-color: #dcdde1;
-    }
-
-    /* Buttons */
-    div.stButton > button {
-        background-color: #40739e;
-        color: white;
-        font-weight: 600;
-        border-radius: 8px;
-        padding: 8px 15px;
-    }
-
-    /* Cards */
-    .card {
-        background-color: white;
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-    }
-
-    /* Chart containers */
-    .chart-card {
-        background-color: white;
-        padding: 15px;
-        border-radius: 15px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-    }
+    .stApp {{ background-color: {bg_color}; color: {text_color}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
+    .header {{ font-size: 36px; font-weight: 700; color: {text_color}; padding-bottom: 20px; }}
+    div.stButton > button {{ background-color: #40739e; color: white; font-weight: 600; border-radius: 8px; padding: 8px 15px; }}
+    .card {{ background-color: {card_bg}; padding: 20px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px; color: {text_color}; }}
+    .chart-card {{ background-color: {card_bg}; padding: 15px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px; color: {text_color}; }}
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 class='stHeader'>FinTrack - Personal Finance Tracker</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='header'>FinTrack - Personal Finance Tracker</h1>", unsafe_allow_html=True)
 
 # ------------------ SIDEBAR ------------------ #
 st.sidebar.title("Settings")
@@ -163,16 +145,14 @@ elif menu == "Dashboard":
         balance = total_income - total_expense
         currency_symbol = st.session_state.currency.split()[1]
 
-        # Metrics cards
         col1, col2, col3 = st.columns(3)
-        col1.markdown(f"<div class='card'><h3>Total Income</h3><h2>{currency_symbol}{total_income:,.2f}</h2></div>", unsafe_allow_html=True)
-        col2.markdown(f"<div class='card'><h3>Total Expense</h3><h2>{currency_symbol}{total_expense:,.2f}</h2></div>", unsafe_allow_html=True)
-        col3.markdown(f"<div class='card'><h3>Balance</h3><h2>{currency_symbol}{balance:,.2f}</h2></div>", unsafe_allow_html=True)
+        col1.markdown(f"<div class='card' style='border-left: 5px solid {income_color};'><h3>Total Income</h3><h2>{currency_symbol}{total_income:,.2f}</h2></div>", unsafe_allow_html=True)
+        col2.markdown(f"<div class='card' style='border-left: 5px solid {expense_color};'><h3>Total Expense</h3><h2>{currency_symbol}{total_expense:,.2f}</h2></div>", unsafe_allow_html=True)
+        col3.markdown(f"<div class='card' style='border-left: 5px solid {balance_color};'><h3>Balance</h3><h2>{currency_symbol}{balance:,.2f}</h2></div>", unsafe_allow_html=True)
 
         st.markdown("---")
         col1, col2 = st.columns(2)
 
-        # Pie chart card
         with col1:
             expense_df = df[df['type']=='expense']
             if not expense_df.empty:
@@ -181,7 +161,6 @@ elif menu == "Dashboard":
                 st.plotly_chart(fig, use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
-        # Monthly summary bar chart
         with col2:
             df['date'] = pd.to_datetime(df['date'])
             df['month'] = df['date'].dt.strftime('%Y-%m')
