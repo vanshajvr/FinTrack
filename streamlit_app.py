@@ -65,12 +65,11 @@ st.markdown(
 )
 
 # ------------------ SIDEBAR NAVIGATION ------------------ #
-st.sidebar.markdown("<h2 style='text-align:center;'>Menu</h2>", unsafe_allow_html=True)
-menu_options = ["Add Transaction", "Dashboard", "View Transactions"]
-menu = st.sidebar.radio("", menu_options, index=0)
+st.sidebar.markdown("<h1 style='text-align:center;'>FinTrack</h1>", unsafe_allow_html=True)
+menu_options = ["Home", "Dashboard", "Add Transaction", "View Transactions"]
+menu = st.sidebar.radio("Navigate", menu_options, index=0)
 
 st.sidebar.markdown("---")
-
 # Currency selection
 st.sidebar.markdown("### Currency")
 currency = st.sidebar.selectbox(
@@ -84,8 +83,38 @@ st.session_state.currency = currency
 st.sidebar.markdown("---")
 st.session_state.dark_mode = st.sidebar.checkbox("Dark Mode", value=st.session_state.dark_mode)
 
+# ------------------ HOME ------------------ #
+if menu == "Home":
+    st.title("Welcome to FinTrack")
+    st.markdown(f"Manage your personal finances efficiently. Current currency: **{st.session_state.currency}**")
+
+    conn = get_db_connection()
+    df = pd.read_sql_query("SELECT * FROM transactions", conn)
+    conn.close()
+    df = df[df["currency"] == st.session_state.currency]
+
+    if df.empty:
+        st.info("No transactions yet. Add your first transaction!")
+    else:
+        total_income = df[df['type']=='income']['amount'].sum()
+        total_expense = df[df['type']=='expense']['amount'].sum()
+        balance = total_income - total_expense
+        symbol = st.session_state.currency.split()[1]
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Income", f"{symbol}{total_income:,.2f}")
+        col2.metric("Total Expense", f"{symbol}{total_expense:,.2f}")
+        col3.metric("Balance", f"{symbol}{balance:,.2f}")
+
+        st.markdown("---")
+        # Expense Pie chart
+        expense_df = df[df['type']=='expense']
+        if not expense_df.empty:
+            fig = px.pie(expense_df, names='category', values='amount', title=f"Expense Breakdown ({st.session_state.currency})")
+            st.plotly_chart(fig, use_container_width=True)
+
 # ------------------ ADD TRANSACTION ------------------ #
-if menu == "Add Transaction":
+elif menu == "Add Transaction":
     st.title("Add New Transaction")
 
     col1, col2 = st.columns(2)
@@ -138,8 +167,6 @@ elif menu == "Dashboard":
             if not expense_df.empty:
                 fig = px.pie(expense_df, names='category', values='amount', title=f"Expense Breakdown ({st.session_state.currency})")
                 st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.warning("No expense data.")
 
         with col2:
             df['date'] = pd.to_datetime(df['date'])
