@@ -3,7 +3,7 @@ import requests
 
 API_URL = "http://localhost:5000/api/transactions"  # Change to your deployed URL
 
-st.title("Personal Finance Tracker")
+st.title("FinTrack: Your Personal Finance Tracker")
 
 # Form to add a transaction
 with st.form("Add Transaction"):
