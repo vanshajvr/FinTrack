@@ -131,14 +131,15 @@ elif menu == "📊 Dashboard":
         # Bar chart by month
         with col2:
             df['date'] = pd.to_datetime(df['date'])
-            df['month'] = df['date'].dt.to_period('M')
+            df['month'] = df['date'].dt.strftime('%Y-%m')  # ✅ Convert to string (e.g. 2025-09)
             monthly_summary = df.groupby(['month', 'type'])['amount'].sum().reset_index()
+
             fig2 = px.bar(
                 monthly_summary,
                 x='month',
                 y='amount',
                 color='type',
-                title=f"Monthly Income vs Expense ({st.session_state.currency})",
+                title="Monthly Income vs Expense",
                 barmode='group',
             )
             st.plotly_chart(fig2, use_container_width=True)
