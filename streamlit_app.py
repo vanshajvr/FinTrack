@@ -98,7 +98,7 @@ if menu == "Home":
     **About the Creator:**
     - Built by [Vanshaj Verma]
     - Aspiring Developer
-    [GitHub][https://www.github.com/vanshajvr]
+    [GitHub]{https://www.github.com/vanshajvr}
     """)
     st.markdown("---")
 
