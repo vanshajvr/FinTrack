@@ -150,7 +150,7 @@ with col4:
         navigate("View Transactions")
 
 with col5:
-    mode_label = "🌙 Dark Mode" if not st.session_state.dark_mode else "☀️ Light Mode"
+    mode_label = "Dark Mode" if not st.session_state.dark_mode else "Light Mode"
     if st.button(mode_label, key="dark_toggle", use_container_width=True):
         st.session_state.dark_mode = not st.session_state.dark_mode
         st.experimental_rerun()
@@ -179,8 +179,8 @@ if st.session_state.page == "Home":
 
     st.markdown("### About the Creator")
     st.markdown("""
-    Built by **[Vanshaj Verma](https://www.linkedin.com/in/vanshajverma60)**  
-    Check out the source code on [**GitHub**](https://github.com/vanshajvr)
+    - Built by  **[Vanshaj Verma](https://www.linkedin.com/in/vanshajverma60)**  
+    - Check out the source code on  [**GitHub**](https://github.com/vanshajvr)
     """)
 
 # ------------------ ADD TRANSACTION ------------------ #
