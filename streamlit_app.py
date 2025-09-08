@@ -38,7 +38,6 @@ init_db()
 # ------------------ STREAMLIT CONFIG ------------------ #
 st.set_page_config(
     page_title="FinTrack - Personal Finance Dashboard",
-    page_icon="💰",
     layout="wide"
 )
 
@@ -118,19 +117,19 @@ st.markdown(f"""
 col1, col2, col3, col4, col5 = st.columns([1,1,1,1,2])
 
 with col1:
-    if st.button("🏠 Home", key="home", use_container_width=True):
+    if st.button("Home", key="home", use_container_width=True):
         navigate("Home")
 
 with col2:
-    if st.button("➕ Add Transaction", key="add", use_container_width=True):
+    if st.button("Add Transaction", key="add", use_container_width=True):
         navigate("Add Transaction")
 
 with col3:
-    if st.button("📊 Dashboard", key="dashboard", use_container_width=True):
+    if st.button("Dashboard", key="dashboard", use_container_width=True):
         navigate("Dashboard")
 
 with col4:
-    if st.button("📄 View Transactions", key="view", use_container_width=True):
+    if st.button("View Transactions", key="view", use_container_width=True):
         navigate("View Transactions")
 
 with col5:
@@ -143,7 +142,7 @@ st.markdown("---")
 
 # ------------------ HOME ------------------ #
 if st.session_state.page == "Home":
-    st.title("💰 FinTrack - Personal Finance Dashboard")
+    st.title("FinTrack - Personal Finance Dashboard")
     st.subheader("Track. Analyze. Grow.")
     st.write(
         """
@@ -152,7 +151,7 @@ if st.session_state.page == "Home":
         """
     )
 
-    st.markdown("### 🚀 Features")
+    st.markdown("### Features")
     st.markdown("""
     - Add and manage income and expenses easily  
     - Categorize transactions (Salary, Food, Travel, Bills, etc.)
@@ -161,7 +160,7 @@ if st.session_state.page == "Home":
     - Download your transaction history as CSV
     """)
 
-    st.markdown("### 👨‍💻 About the Creator")
+    st.markdown("### About the Creator")
     st.markdown("""
     Built by **[Vanshaj Verma](https://www.linkedin.com/in/vanshajverma60)**  
     Check out the source code on [**GitHub**](https://github.com/vanshajvr)
@@ -169,7 +168,7 @@ if st.session_state.page == "Home":
 
 # ------------------ ADD TRANSACTION ------------------ #
 elif st.session_state.page == "Add Transaction":
-    st.title("➕ Add New Transaction")
+    st.title("Add New Transaction")
 
     categories = ["Salary", "Food", "Travel", "Entertainment", "Shopping", "Bills", "Health", "General"]
 
@@ -187,7 +186,7 @@ elif st.session_state.page == "Add Transaction":
 
     currency = st.selectbox("Currency", ["INR", "USD", "EUR", "GBP"], index=0)
 
-    if st.button("💾 Save Transaction"):
+    if st.button("Save Transaction"):
         if not category:
             st.warning("Please enter a category.")
         else:
@@ -202,7 +201,7 @@ elif st.session_state.page == "Add Transaction":
 
 # ------------------ DASHBOARD ------------------ #
 elif st.session_state.page == "Dashboard":
-    st.title("📊 Finance Dashboard")
+    st.title("Finance Dashboard")
     conn = get_db_connection()
     df = pd.read_sql_query("SELECT * FROM transactions", conn)
     conn.close()
@@ -253,7 +252,7 @@ elif st.session_state.page == "Dashboard":
 
 # ------------------ VIEW TRANSACTIONS ------------------ #
 elif st.session_state.page == "View Transactions":
-    st.title("📄 Transaction History")
+    st.title("Transaction History")
     conn = get_db_connection()
     df = pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC", conn)
     conn.close()
