@@ -42,18 +42,46 @@ st.set_page_config(
 )
 
 # ------------------ DARK/LIGHT MODE ------------------ #
+# Dark/light mode toggle
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = False
 
-# Colors based on mode
+st.session_state.dark_mode = st.sidebar.checkbox("🌗 Dark Mode", value=st.session_state.dark_mode)
+
+# Dynamic theme colors
 if st.session_state.dark_mode:
-    bg_color = "#0e1117"
+    bg_color = "#121212"
     text_color = "#f0f0f0"
-    card_color = "#161b22"
+    card_color = "#1f1f1f"
 else:
-    bg_color = "#f8f9fa"
+    bg_color = "#f9f9f9"
     text_color = "#111111"
     card_color = "#ffffff"
+
+# Inject custom CSS
+st.markdown(
+    f"""
+    <style>
+        body {{
+            background-color: {bg_color};
+            color: {text_color};
+        }}
+        .stMarkdown, .stText, .stMetric, .stTable, .stDataFrame {{
+            color: {text_color};
+        }}
+        .stButton>button {{
+            background-color: {card_color};
+            color: {text_color};
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: bold;
+            border: none;
+        }}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 
 # ------------------ NAVIGATION ------------------ #
 if "page" not in st.session_state:
