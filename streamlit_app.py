@@ -8,8 +8,7 @@ from datetime import datetime
 DB_FILE = "finance.db"
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_FILE)
-    return conn
+    return sqlite3.connect(DB_FILE)
 
 def init_db():
     conn = get_db_connection()
@@ -17,7 +16,7 @@ def init_db():
     cursor.execute("PRAGMA table_info(transactions)")
     columns = [info[1] for info in cursor.fetchall()]
 
-    if 'currency' not in columns:
+    if "currency" not in columns:
         conn.execute("ALTER TABLE transactions ADD COLUMN currency TEXT DEFAULT 'INR'")
         conn.commit()
 
@@ -36,97 +35,141 @@ def init_db():
 
 init_db()
 
-# ------------------ PAGE CONFIG ------------------ #
+# ------------------ STREAMLIT CONFIG ------------------ #
 st.set_page_config(
     page_title="FinTrack - Personal Finance Dashboard",
     page_icon="💰",
     layout="wide"
 )
 
-# ------------------ SITE COLORS & FONTS ------------------ #
+# ------------------ DARK/LIGHT MODE ------------------ #
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = False
 
-# Dark/Light toggle in top-right corner
-st.session_state.dark_mode = st.checkbox("Dark Mode", value=st.session_state.dark_mode, key="dark_mode_toggle")
-
+# Colors based on mode
 if st.session_state.dark_mode:
-    bg_color = "#121212"
+    bg_color = "#0e1117"
     text_color = "#f0f0f0"
-    card_color = "#1f1f1f"
+    card_color = "#161b22"
 else:
-    bg_color = "#f9f9f9"
+    bg_color = "#f8f9fa"
     text_color = "#111111"
     card_color = "#ffffff"
 
-st.markdown(f"""
-    <style>
-        body {{ background-color: {bg_color}; color: {text_color}; font-family: 'Arial', sans-serif; }}
-        .stButton>button {{ background-color: {card_color}; color: {text_color}; border-radius: 5px; }}
-        .stDataFrame>div {{ background-color: {card_color}; color: {text_color}; }}
-        h1, h2, h3, h4 {{ color: {text_color}; }}
-        .navbar {{
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            padding: 10px 0;
-            background-color: {card_color};
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }}
-        .nav-link {{
-            cursor: pointer;
-            font-weight: bold;
-            color: {text_color};
-        }}
-        .nav-link:hover {{
-            text-decoration: underline;
-        }}
-    </style>
-""", unsafe_allow_html=True)
-
 # ------------------ NAVIGATION ------------------ #
-# Simple single-page navigation using session_state
 if "page" not in st.session_state:
     st.session_state.page = "Home"
 
 def navigate(page_name):
     st.session_state.page = page_name
 
-# Top navbar
+# ------------------ CUSTOM CSS ------------------ #
 st.markdown(f"""
-<div class="navbar">
-    <span class="nav-link" onclick="window.location.reload();">{'Home'}</span>
-    <span class="nav-link" onclick="window.location.reload();">{'Add Transaction'}</span>
-    <span class="nav-link" onclick="window.location.reload();">{'Dashboard'}</span>
-    <span class="nav-link" onclick="window.location.reload();">{'View Transactions'}</span>
-</div>
+    <style>
+        body {{
+            background-color: {bg_color};
+            color: {text_color};
+            font-family: 'Inter', sans-serif;
+        }}
+
+        /* Navbar styling */
+        .navbar {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 32px;
+            background-color: {card_color};
+            box-shadow: 0px 1px 5px rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+            margin-bottom: 25px;
+        }}
+        .nav-links {{
+            display: flex;
+            gap: 25px;
+        }}
+        .nav-button {{
+            background-color: transparent;
+            color: {text_color};
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }}
+        .nav-button:hover {{
+            color: #2e89ff;
+        }}
+        .mode-toggle {{
+            background-color: #2e89ff;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }}
+        .mode-toggle:hover {{
+            background-color: #1a6fe3;
+        }}
+    </style>
 """, unsafe_allow_html=True)
 
-# For actual navigation, we'll use selectbox as hidden
-page_select = st.selectbox("", ["Home", "Add Transaction", "Dashboard", "View Transactions"], index=["Home", "Add Transaction", "Dashboard", "View Transactions"].index(st.session_state.page), key="page_select", label_visibility="collapsed")
-st.session_state.page = page_select
+# ------------------ NAVBAR ------------------ #
+col1, col2, col3, col4, col5 = st.columns([1,1,1,1,2])
+
+with col1:
+    if st.button("🏠 Home", key="home", use_container_width=True):
+        navigate("Home")
+
+with col2:
+    if st.button("➕ Add Transaction", key="add", use_container_width=True):
+        navigate("Add Transaction")
+
+with col3:
+    if st.button("📊 Dashboard", key="dashboard", use_container_width=True):
+        navigate("Dashboard")
+
+with col4:
+    if st.button("📄 View Transactions", key="view", use_container_width=True):
+        navigate("View Transactions")
+
+with col5:
+    mode_label = "🌙 Dark Mode" if not st.session_state.dark_mode else "☀️ Light Mode"
+    if st.button(mode_label, key="dark_toggle", use_container_width=True):
+        st.session_state.dark_mode = not st.session_state.dark_mode
+        st.experimental_rerun()
+
+st.markdown("---")
 
 # ------------------ HOME ------------------ #
 if st.session_state.page == "Home":
-    st.title("FinTrack - Your Personal Finance Dashboard")
-    st.markdown("""
-    **Features:**
-    - Add and track your income and expenses
-    - Categorize transactions (Salary, Food, Travel, etc.)
-    - Filter transactions by currency
-    - Visual dashboards for insights
-    - Download transaction history as CSV
+    st.title("💰 FinTrack - Personal Finance Dashboard")
+    st.subheader("Track. Analyze. Grow.")
+    st.write(
+        """
+        **FinTrack** helps you stay on top of your finances effortlessly.  
+        Organize your income and expenses, visualize insights, and make smarter decisions.
+        """
+    )
 
-    **About the Creator:**
-    - Built by [Vanshaj Verma](https://www.linkedin.com/in/vanshajverma60)
-    - GitHub: [vanshajvr](https://github.com/vanshajvr)
+    st.markdown("### 🚀 Features")
+    st.markdown("""
+    - Add and manage income and expenses easily  
+    - Categorize transactions (Salary, Food, Travel, Bills, etc.)
+    - Filter transactions by currency
+    - View sleek dashboards with interactive graphs
+    - Download your transaction history as CSV
     """)
-    st.markdown("---")
+
+    st.markdown("### 👨‍💻 About the Creator")
+    st.markdown("""
+    Built by **[Vanshaj Verma](https://www.linkedin.com/in/vanshajverma60)**  
+    Check out the source code on [**GitHub**](https://github.com/vanshajvr)
+    """)
 
 # ------------------ ADD TRANSACTION ------------------ #
 elif st.session_state.page == "Add Transaction":
-    st.title("Add New Transaction")
+    st.title("➕ Add New Transaction")
 
     categories = ["Salary", "Food", "Travel", "Entertainment", "Shopping", "Bills", "Health", "General"]
 
@@ -141,11 +184,10 @@ elif st.session_state.page == "Add Transaction":
         else:
             category = category_option
         date = st.date_input("Date", datetime.today())
-    
-    # Currency selector
+
     currency = st.selectbox("Currency", ["INR", "USD", "EUR", "GBP"], index=0)
 
-    if st.button("Add Transaction"):
+    if st.button("💾 Save Transaction"):
         if not category:
             st.warning("Please enter a category.")
         else:
@@ -160,7 +202,7 @@ elif st.session_state.page == "Add Transaction":
 
 # ------------------ DASHBOARD ------------------ #
 elif st.session_state.page == "Dashboard":
-    st.title("Finance Dashboard")
+    st.title("📊 Finance Dashboard")
     conn = get_db_connection()
     df = pd.read_sql_query("SELECT * FROM transactions", conn)
     conn.close()
@@ -182,24 +224,36 @@ elif st.session_state.page == "Dashboard":
 
         expense_df = df[df['type'] == 'expense']
         if not expense_df.empty:
-            fig = px.pie(expense_df, names='category', values='amount', hole=0.3,
+            fig = px.pie(expense_df, names='category', values='amount', hole=0.35,
                          color_discrete_sequence=px.colors.sequential.Teal)
-            fig.update_layout(paper_bgcolor=card_color, plot_bgcolor=card_color,
-                              font=dict(color=text_color, family="Arial"))
-            st.plotly_chart(fig, use_container_width=True)
+            fig.update_layout(
+                paper_bgcolor=card_color,
+                plot_bgcolor=card_color,
+                font=dict(color=text_color, family="Inter"),
+            )
+            col1.plotly_chart(fig, use_container_width=True)
 
         df['date'] = pd.to_datetime(df['date'])
         df['month'] = df['date'].dt.strftime('%Y-%m')
         monthly_summary = df.groupby(['month', 'type'])['amount'].sum().reset_index()
-        fig2 = px.bar(monthly_summary, x='month', y='amount', color='type', barmode='group',
-                      color_discrete_map={'income':'#1f77b4', 'expense':'#ff7f0e'})
-        fig2.update_layout(paper_bgcolor=card_color, plot_bgcolor=card_color,
-                           font=dict(color=text_color, family="Arial"))
-        st.plotly_chart(fig2, use_container_width=True)
+        fig2 = px.bar(
+            monthly_summary,
+            x='month',
+            y='amount',
+            color='type',
+            barmode='group',
+            color_discrete_map={'income':'#2e89ff', 'expense':'#ff5252'}
+        )
+        fig2.update_layout(
+            paper_bgcolor=card_color,
+            plot_bgcolor=card_color,
+            font=dict(color=text_color, family="Inter")
+        )
+        col2.plotly_chart(fig2, use_container_width=True)
 
 # ------------------ VIEW TRANSACTIONS ------------------ #
 elif st.session_state.page == "View Transactions":
-    st.title("Transaction History")
+    st.title("📄 Transaction History")
     conn = get_db_connection()
     df = pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC", conn)
     conn.close()
@@ -207,6 +261,6 @@ elif st.session_state.page == "View Transactions":
     if df.empty:
         st.info("No transactions found.")
     else:
-        st.dataframe(df)
+        st.dataframe(df, use_container_width=True)
         csv = df.to_csv(index=False).encode("utf-8")
-        st.download_button("Download CSV", csv, "transactions.csv", "text/csv")
+        st.download_button("⬇ Download CSV", csv, "transactions.csv", "text/csv")
