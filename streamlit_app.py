@@ -42,7 +42,6 @@ st.set_page_config(
 )
 
 # ------------------ DARK/LIGHT MODE ------------------ #
-# Dark/light mode toggle
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = False
 
@@ -53,35 +52,12 @@ if st.session_state.dark_mode:
     bg_color = "#121212"
     text_color = "#f0f0f0"
     card_color = "#1f1f1f"
+    highlight_color = "#2e89ff"
 else:
     bg_color = "#f9f9f9"
     text_color = "#111111"
     card_color = "#ffffff"
-
-# Inject custom CSS
-st.markdown(
-    f"""
-    <style>
-        body {{
-            background-color: {bg_color};
-            color: {text_color};
-        }}
-        .stMarkdown, .stText, .stMetric, .stTable, .stDataFrame {{
-            color: {text_color};
-        }}
-        .stButton>button {{
-            background-color: {card_color};
-            color: {text_color};
-            border-radius: 8px;
-            padding: 8px 16px;
-            font-weight: bold;
-            border: none;
-        }}
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
+    highlight_color = "#2e89ff"
 
 # ------------------ NAVIGATION ------------------ #
 if "page" not in st.session_state:
@@ -90,7 +66,7 @@ if "page" not in st.session_state:
 def navigate(page_name):
     st.session_state.page = page_name
 
-# ------------------ CUSTOM CSS ------------------ #
+# ------------------ MERGED CUSTOM CSS ------------------ #
 st.markdown(f"""
     <style>
         body {{
@@ -121,12 +97,15 @@ st.markdown(f"""
             font-weight: 600;
             border: none;
             cursor: pointer;
+            transition: color 0.2s ease-in-out;
         }}
         .nav-button:hover {{
-            color: #2e89ff;
+            color: {highlight_color};
         }}
+
+        /* Mode toggle button */
         .mode-toggle {{
-            background-color: #2e89ff;
+            background-color: {highlight_color};
             color: white;
             padding: 5px 15px;
             border-radius: 6px;
@@ -137,6 +116,16 @@ st.markdown(f"""
         }}
         .mode-toggle:hover {{
             background-color: #1a6fe3;
+        }}
+
+        /* Buttons & Cards */
+        .stButton>button {{
+            background-color: {card_color};
+            color: {text_color};
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: bold;
+            border: none;
         }}
     </style>
 """, unsafe_allow_html=True)
