@@ -13,25 +13,28 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("PRAGMA table_info(transactions)")
-    columns = [info[1] for info in cursor.fetchall()]
 
-    if "currency" not in columns:
-        conn.execute("ALTER TABLE transactions ADD COLUMN currency TEXT DEFAULT 'INR'")
-        conn.commit()
-
-    conn.execute("""
+    # Check if the 'transactions' table exists
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             amount REAL NOT NULL,
             type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
             category TEXT NOT NULL,
-            currency TEXT NOT NULL,
+            currency TEXT NOT NULL DEFAULT 'INR',
             date TEXT NOT NULL
         )
     """)
+
+    # ✅ Check if 'currency' column exists before adding
+    cursor.execute("PRAGMA table_info(transactions)")
+    columns = [info[1] for info in cursor.fetchall()]
+    if "currency" not in columns:
+        cursor.execute("ALTER TABLE transactions ADD COLUMN currency TEXT DEFAULT 'INR'")
+
     conn.commit()
     conn.close()
+
 
 init_db()
 
